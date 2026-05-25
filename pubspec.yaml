@@ -1,0 +1,43 @@
+name: trainer_app
+description: "WTF Trainer-side app. Persona: Aarav."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  flutter_riverpod: ^2.5.1
+  go_router: ^14.6.2
+  hmssdk_flutter: ^1.11.1
+
+  shared:
+    path: ../shared
+
+# path_provider_android >=2.3.0 pulls in `jni` whose libdartjni.so refuses to
+# load on some HyperOS / 16KB-page Xiaomi builds. Pin the last platform-
+# channel version until that's resolved upstream.
+dependency_overrides:
+  path_provider_android: 2.2.16
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.1
+
+flutter:
+  uses-material-design: true
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "../assets/branding/trainer_icon.png"
+  adaptive_icon_background: "#E50914"
+  adaptive_icon_foreground: "../assets/branding/trainer_foreground.png"
+  min_sdk_android: 24
+  remove_alpha_ios: true
