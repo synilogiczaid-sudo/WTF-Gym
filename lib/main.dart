@@ -4,12 +4,17 @@ import 'package:shared/shared.dart';
 
 import 'app.dart';
 
-/// Last-known LAN IP of the laptop running `token_server`. Acts as a
-/// best-effort seed for the very first launch; overridable at build time
-/// via `--dart-define=API_HOST=...`.
+/// Default API host seed for the very first launch.
+///
+/// `localhost` works out of the box whenever the device has an active
+/// `adb reverse tcp:8787 tcp:8787` tunnel — i.e. the standard USB-debug
+/// flow used during development — so the laptop's roaming LAN IP never
+/// matters. For Wi-Fi-only review on a fresh install, pass
+/// `--dart-define=API_HOST=<laptop_ip>` at build time, or set the IP
+/// from the in-app DevPanel (long-press the home greeting).
 const _kDefaultLanHost = String.fromEnvironment(
   'API_HOST',
-  defaultValue: '10.28.39.79',
+  defaultValue: 'localhost',
 );
 
 Future<void> main() async {

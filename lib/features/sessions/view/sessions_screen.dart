@@ -38,6 +38,7 @@ class _SessionsScreenState extends ConsumerState<SessionsScreen> {
     final logs = ref.watch(trainerSessionsProvider);
 
     return Scaffold(
+      backgroundColor: AppColors.bgSoft,
       appBar: AppBar(
         title: const Text('Sessions'),
         leading: IconButton(
@@ -49,18 +50,10 @@ class _SessionsScreenState extends ConsumerState<SessionsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.sm),
-              child: Wrap(
-                spacing: 8,
-                children: SessionsFilter.values.map((f) {
-                  return ChoiceChip(
-                    label: Text(f.label),
-                    selected: f == filter,
-                    onSelected: (_) => ref.read(sessionsFilterProvider.notifier).state = f,
-                  );
-                }).toList(),
-              ),
+            _FilterBar(
+              filter: filter,
+              onSelected: (f) =>
+                  ref.read(sessionsFilterProvider.notifier).state = f,
             ),
             Expanded(
               child: logs.when(
@@ -71,19 +64,91 @@ class _SessionsScreenState extends ConsumerState<SessionsScreen> {
                     return const EmptyState(
                       icon: Icons.timer_off_outlined,
                       title: 'No sessions yet',
-                      subtitle: 'Completed calls will appear here with their duration and ratings.',
+                      subtitle:
+                          'Completed calls will appear here with their duration and ratings.',
                     );
                   }
-                  return ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                    itemCount: list.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-                    itemBuilder: (_, i) => _SessionTile(log: list[i]),
+                  return RefreshIndicator(
+                    onRefresh: () => ref.read(logServiceProvider).refresh(),
+                    child: ListView.separated(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.md,
+                        AppSpacing.sm,
+                        AppSpacing.md,
+                        AppSpacing.xl,
+                      ),
+                      itemCount: list.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
+                      itemBuilder: (_, i) => _SessionTile(log: list[i]),
+                    ),
                   );
                 },
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FilterBar extends StatelessWidget {
+  const _FilterBar({required this.filter, required this.onSelected});
+
+  final SessionsFilter filter;
+  final ValueChanged<SessionsFilter> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.sm),
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceAlt,
+          borderRadius: BorderRadius.circular(AppRadii.pill),
+        ),
+        child: Row(
+          children: SessionsFilter.values.map((f) {
+            final selected = f == filter;
+            return Expanded(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => onSelected(f),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOut,
+                  height: 36,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: selected ? Colors.white : Colors.transparent,
+                    borderRadius: BorderRadius.circular(AppRadii.pill),
+                    boxShadow: selected
+                        ? const [
+                            BoxShadow(
+                              color: Color(0x14101828),
+                              blurRadius: 8,
+                              offset: Offset(0, 2),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Text(
+                    f.label,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: selected ? primary : AppColors.subtle,
+                      letterSpacing: 0.1,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
         ),
       ),
     );
@@ -96,54 +161,93 @@ class _SessionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () => _openDetail(context, log),
+    final completed = log.completed;
+    return Material(
+      color: Colors.white,
       borderRadius: BorderRadius.circular(AppRadii.lg),
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: AppColors.divider),
-          borderRadius: BorderRadius.circular(AppRadii.lg),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(AppRadii.md),
+      child: InkWell(
+        onTap: () => _openDetail(context, log),
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: AppColors.divider),
+            borderRadius: BorderRadius.circular(AppRadii.lg),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x08101828),
+                blurRadius: 12,
+                offset: Offset(0, 3),
               ),
-              child: Icon(
-                log.completed ? Icons.task_alt_rounded : Icons.videocam_rounded,
-                color: log.completed ? AppColors.success : AppColors.subtle,
+            ],
+          ),
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: (completed ? AppColors.success : AppColors.subtle)
+                      .withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppRadii.md),
+                ),
+                child: Icon(
+                  completed ? Icons.task_alt_rounded : Icons.videocam_rounded,
+                  color: completed ? AppColors.success : AppColors.subtle,
+                  size: 22,
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(TimeFormat.dateAndTime(log.startedAt),
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.ink)),
-                  const SizedBox(height: 2),
-                  Text(TimeFormat.duration(Duration(seconds: log.durationSec)),
-                      style: const TextStyle(fontSize: 12, color: AppColors.subtle)),
-                ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      TimeFormat.dateAndTime(log.startedAt),
+                      style: const TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.ink,
+                        letterSpacing: -0.1,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        const Icon(Icons.schedule_rounded, size: 12, color: AppColors.subtle),
+                        const SizedBox(width: 4),
+                        Text(
+                          TimeFormat.duration(Duration(seconds: log.durationSec)),
+                          style: const TextStyle(fontSize: 12, color: AppColors.subtle),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-            if (log.rating != null)
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.star_rounded, color: AppColors.warning, size: 18),
-                  const SizedBox(width: 2),
-                  Text('${log.rating}',
-                      style: const TextStyle(color: AppColors.ink, fontWeight: FontWeight.w600)),
-                ],
-              ),
-          ],
+              if (log.rating != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: AppColors.warning.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppRadii.pill),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.star_rounded, color: AppColors.warning, size: 14),
+                      const SizedBox(width: 3),
+                      Text('${log.rating}',
+                          style: const TextStyle(
+                              color: AppColors.warning,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12)),
+                    ],
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -154,6 +258,7 @@ class _SessionTile extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
+      backgroundColor: Colors.white,
       builder: (_) => Padding(
         padding: EdgeInsets.fromLTRB(
           AppSpacing.lg,
@@ -165,19 +270,60 @@ class _SessionTile extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(TimeFormat.dateAndTime(log.startedAt),
-                style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 4),
-            Text(
-              'Duration • ${TimeFormat.duration(Duration(seconds: log.durationSec))}',
-              style: const TextStyle(color: AppColors.subtle, fontSize: 12),
+            Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppRadii.md),
+                  ),
+                  child: const Icon(Icons.history_rounded, color: AppColors.success),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(TimeFormat.dateAndTime(log.startedAt),
+                          style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Duration • ${TimeFormat.duration(Duration(seconds: log.durationSec))}',
+                        style: const TextStyle(color: AppColors.subtle, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                if (log.rating != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: AppColors.warning.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(AppRadii.pill),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.star_rounded, color: AppColors.warning, size: 14),
+                        const SizedBox(width: 3),
+                        Text('${log.rating}',
+                            style: const TextStyle(
+                                color: AppColors.warning,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12)),
+                      ],
+                    ),
+                  ),
+              ],
             ),
+            const SizedBox(height: AppSpacing.lg),
+            const _DetailLabel('Member notes'),
+            _DetailBubble(text: log.memberNotes),
             const SizedBox(height: AppSpacing.md),
-            const _Label('Member notes'),
-            Text(log.memberNotes?.trim().isNotEmpty == true ? log.memberNotes! : '—'),
-            const SizedBox(height: AppSpacing.md),
-            const _Label('Your notes'),
-            Text(log.trainerNotes?.trim().isNotEmpty == true ? log.trainerNotes! : '—'),
+            const _DetailLabel('Your notes'),
+            _DetailBubble(text: log.trainerNotes),
           ],
         ),
       ),
@@ -185,13 +331,48 @@ class _SessionTile extends StatelessWidget {
   }
 }
 
-class _Label extends StatelessWidget {
-  const _Label(this.text);
+class _DetailLabel extends StatelessWidget {
+  const _DetailLabel(this.text);
   final String text;
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 4),
-        child: Text(text,
-            style: const TextStyle(fontSize: 12, color: AppColors.subtle, fontWeight: FontWeight.w600)),
+        padding: const EdgeInsets.only(bottom: 6),
+        child: Text(
+          text.toUpperCase(),
+          style: const TextStyle(
+            fontSize: 10.5,
+            color: AppColors.subtle,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.0,
+          ),
+        ),
       );
+}
+
+class _DetailBubble extends StatelessWidget {
+  const _DetailBubble({required this.text});
+  final String? text;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasText = text?.trim().isNotEmpty ?? false;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadii.md),
+        border: Border.all(color: AppColors.dividerSoft),
+      ),
+      child: Text(
+        hasText ? text! : '—',
+        style: TextStyle(
+          fontSize: 13.5,
+          color: hasText ? AppColors.inkSoft : AppColors.muted,
+          fontStyle: hasText ? FontStyle.normal : FontStyle.italic,
+          height: 1.45,
+        ),
+      ),
+    );
+  }
 }

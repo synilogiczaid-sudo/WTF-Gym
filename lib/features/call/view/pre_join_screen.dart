@@ -58,8 +58,9 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
     final user = ref.watch(currentUserProvider);
 
     return Scaffold(
+      backgroundColor: AppColors.bgSoft,
       appBar: AppBar(
-        title: const Text('Ready to join? Check mic and camera.'),
+        title: const Text('Ready to start?'),
         leading: IconButton(
           icon: const Icon(Icons.close_rounded),
           onPressed: () => context.go('/home'),
@@ -74,39 +75,33 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
               return const EmptyState(title: 'Call not found');
             }
             return Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.lg,
+                AppSpacing.lg,
+                AppSpacing.lg,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Container(
-                    height: 220,
-                    decoration: BoxDecoration(
-                      color: AppColors.ink.withValues(alpha: 0.92),
-                      borderRadius: BorderRadius.circular(AppRadii.lg),
-                    ),
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            _camOn ? Icons.videocam_rounded : Icons.videocam_off_rounded,
-                            color: Colors.white.withValues(alpha: 0.85),
-                            size: 56,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(_camOn ? 'Camera preview' : 'Camera off',
-                              style: const TextStyle(color: Colors.white70, fontSize: 13)),
-                        ],
-                      ),
-                    ),
+                  _PreviewTile(
+                    camOn: _camOn,
+                    micOn: _micOn,
+                    name: user.name,
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   Text('Session with your member',
                       style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Scheduled for ${TimeFormat.dateAndTime(r.scheduledFor)}',
-                    style: const TextStyle(color: AppColors.subtle, fontSize: 13),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(Icons.event_rounded, size: 14, color: AppColors.subtle),
+                      const SizedBox(width: 6),
+                      Text(
+                        TimeFormat.dateAndTime(r.scheduledFor),
+                        style: const TextStyle(color: AppColors.subtle, fontSize: 13),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   Row(
@@ -147,6 +142,107 @@ class _PreJoinScreenState extends ConsumerState<PreJoinScreen> {
   }
 }
 
+class _PreviewTile extends StatelessWidget {
+  const _PreviewTile({
+    required this.camOn,
+    required this.micOn,
+    required this.name,
+  });
+
+  final bool camOn;
+  final bool micOn;
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 260,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppRadii.xl),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFF1F2A3D),
+            AppColors.ink.withValues(alpha: 0.95),
+          ],
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x33101828),
+            blurRadius: 24,
+            offset: Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.10),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
+                  ),
+                  child: Icon(
+                    camOn ? Icons.person_rounded : Icons.videocam_off_rounded,
+                    color: Colors.white.withValues(alpha: 0.85),
+                    size: 36,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  camOn ? 'Camera preview' : 'Camera off',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            left: 14,
+            top: 14,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.36),
+                borderRadius: BorderRadius.circular(AppRadii.pill),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    micOn ? Icons.mic_rounded : Icons.mic_off_rounded,
+                    color: Colors.white,
+                    size: 12,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _Toggle extends StatelessWidget {
   const _Toggle({required this.icon, required this.label, required this.on, required this.onTap});
 
@@ -157,22 +253,44 @@ class _Toggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadii.md),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: on ? Colors.white : AppColors.surface,
-          borderRadius: BorderRadius.circular(AppRadii.md),
-          border: Border.all(color: on ? AppColors.divider : Colors.transparent),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: on ? AppColors.ink : AppColors.subtle),
-            const SizedBox(height: 4),
-            Text(label, style: const TextStyle(fontSize: 12, color: AppColors.ink)),
-          ],
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(vertical: 18),
+          decoration: BoxDecoration(
+            color: on ? Colors.white : AppColors.ink.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(AppRadii.lg),
+            border: Border.all(
+              color: on ? AppColors.divider : Colors.transparent,
+            ),
+            boxShadow: on
+                ? const [
+                    BoxShadow(
+                      color: Color(0x0A101828),
+                      blurRadius: 12,
+                      offset: Offset(0, 4),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Column(
+            children: [
+              Icon(icon, color: on ? AppColors.ink : AppColors.muted, size: 22),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: on ? AppColors.ink : AppColors.muted,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

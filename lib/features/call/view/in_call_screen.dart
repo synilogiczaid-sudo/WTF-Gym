@@ -73,6 +73,7 @@ class InCallScreen extends ConsumerWidget {
                       context: context,
                       isScrollControlled: true,
                       isDismissible: false,
+                      backgroundColor: Colors.white,
                       builder: (_) => TrainerPostCallSheet(sessionId: log.id),
                     );
                   }
@@ -110,12 +111,12 @@ class _TileGrid extends StatelessWidget {
         ? '${demoLocalName ?? 'You'} (You)'
         : '${local?.name ?? 'You'} (You)';
     return Padding(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, 100),
       child: Column(
         children: [
           Expanded(child: _Tile(peer: remote, label: remoteLabel)),
           const SizedBox(height: AppSpacing.sm),
-          Expanded(child: _Tile(peer: local, label: localLabel)),
+          Expanded(child: _Tile(peer: local, label: localLabel, isLocal: true)),
         ],
       ),
     );
@@ -123,18 +124,23 @@ class _TileGrid extends StatelessWidget {
 }
 
 class _Tile extends StatelessWidget {
-  const _Tile({required this.peer, required this.label});
+  const _Tile({required this.peer, required this.label, this.isLocal = false});
   final HMSPeer? peer;
   final String label;
+  final bool isLocal;
 
   @override
   Widget build(BuildContext context) {
     final track = peer?.videoTrack;
     final hasVideo = track != null && !track.isMute;
     return ClipRRect(
-      borderRadius: BorderRadius.circular(AppRadii.lg),
+      borderRadius: BorderRadius.circular(AppRadii.xl),
       child: Container(
-        color: Colors.black,
+        decoration: BoxDecoration(
+          color: const Color(0xFF1F2A3D),
+          borderRadius: BorderRadius.circular(AppRadii.xl),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        ),
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -142,27 +148,81 @@ class _Tile extends StatelessWidget {
               HMSVideoView(track: track, scaleType: ScaleType.SCALE_ASPECT_FILL)
             else
               Center(
-                child: CircleAvatar(
-                  radius: 36,
-                  backgroundColor: Colors.white.withValues(alpha: 0.12),
+                child: Container(
+                  width: 88,
+                  height: 88,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.white.withValues(alpha: 0.16),
+                        Colors.white.withValues(alpha: 0.04),
+                      ],
+                    ),
+                  ),
+                  alignment: Alignment.center,
                   child: Text(
                     (peer?.name ?? '?').characters.first.toUpperCase(),
-                    style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 30,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ),
             Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: 64,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.42),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
               left: 12,
-              bottom: 10,
+              bottom: 12,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(AppRadii.pill),
                 ),
-                child: Text(
-                  label,
-                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (isLocal) ...[
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: const BoxDecoration(
+                          color: AppColors.success,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                    ],
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -191,12 +251,20 @@ class _Controls extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.md),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.lg),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: Colors.black.withValues(alpha: 0.55),
-          borderRadius: BorderRadius.circular(AppRadii.pill),
+          borderRadius: BorderRadius.circular(AppRadii.xl),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x66000000),
+              blurRadius: 24,
+              offset: Offset(0, 8),
+            ),
+          ],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -205,14 +273,25 @@ class _Controls extends StatelessWidget {
               icon: state.micOn ? Icons.mic_rounded : Icons.mic_off_rounded,
               active: !state.micOn,
               onTap: onMic,
+              label: state.micOn ? 'Mute' : 'Unmute',
             ),
             _CtrlButton(
               icon: state.cameraOn ? Icons.videocam_rounded : Icons.videocam_off_rounded,
               active: !state.cameraOn,
               onTap: onCamera,
+              label: state.cameraOn ? 'Camera' : 'Camera off',
             ),
-            _CtrlButton(icon: Icons.cameraswitch_rounded, onTap: onFlip),
-            _CtrlButton(icon: Icons.call_end_rounded, destructive: true, onTap: onEnd),
+            _CtrlButton(
+              icon: Icons.cameraswitch_rounded,
+              onTap: onFlip,
+              label: 'Flip',
+            ),
+            _CtrlButton(
+              icon: Icons.call_end_rounded,
+              destructive: true,
+              onTap: onEnd,
+              label: 'End',
+            ),
           ],
         ),
       ),
@@ -224,12 +303,14 @@ class _CtrlButton extends StatelessWidget {
   const _CtrlButton({
     required this.icon,
     required this.onTap,
+    required this.label,
     this.active = false,
     this.destructive = false,
   });
 
   final IconData icon;
   final VoidCallback onTap;
+  final String label;
   final bool active;
   final bool destructive;
 
@@ -245,15 +326,45 @@ class _CtrlButton extends StatelessWidget {
         : active
             ? AppColors.ink
             : Colors.white;
-    return InkResponse(
-      onTap: onTap,
-      radius: 32,
-      child: Container(
-        width: 56,
-        height: 56,
-        decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
-        child: Icon(icon, color: fg, size: 22),
-      ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Material(
+          color: Colors.transparent,
+          child: InkResponse(
+            onTap: onTap,
+            radius: 34,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              width: destructive ? 60 : 54,
+              height: 54,
+              decoration: BoxDecoration(
+                color: bg,
+                shape: BoxShape.circle,
+                boxShadow: destructive
+                    ? [
+                        BoxShadow(
+                          color: AppColors.error.withValues(alpha: 0.45),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Icon(icon, color: fg, size: 22),
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.85),
+            fontSize: 10.5,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -265,14 +376,22 @@ class _DemoBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.18),
+          color: Colors.white.withValues(alpha: 0.16),
           borderRadius: BorderRadius.circular(AppRadii.pill),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
         ),
-        child: const Text(
-          'Demo session • 100ms creds not configured',
-          style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w500),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.science_outlined, color: Colors.white, size: 12),
+            SizedBox(width: 6),
+            Text(
+              'Demo session · 100ms creds not configured',
+              style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+            ),
+          ],
         ),
       ),
     );
@@ -286,10 +405,17 @@ class _ReconnectBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           color: AppColors.warning.withValues(alpha: 0.95),
           borderRadius: BorderRadius.circular(AppRadii.pill),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.warning.withValues(alpha: 0.4),
+              blurRadius: 14,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: const Row(
           mainAxisSize: MainAxisSize.min,
@@ -299,9 +425,9 @@ class _ReconnectBanner extends StatelessWidget {
               height: 14,
               child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
             ),
-            SizedBox(width: 8),
+            SizedBox(width: 10),
             Text('Reconnecting…',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12)),
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12)),
           ],
         ),
       ),

@@ -42,6 +42,7 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
   Widget build(BuildContext context) {
     final threads = ref.watch(chatThreadsProvider);
     return Scaffold(
+      backgroundColor: AppColors.bgSoft,
       appBar: AppBar(
         title: const Text('Chats'),
         leading: IconButton(
@@ -49,28 +50,41 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
           onPressed: () => context.go('/home'),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.go('/home/members'),
-        child: const Icon(Icons.add_rounded),
+        icon: const Icon(Icons.person_add_alt_1_rounded),
+        label: const Text('New chat'),
+        elevation: 2,
       ),
       body: SafeArea(
         child: threads.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => ListView.builder(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+            itemCount: 6,
+            itemBuilder: (_, __) => const SkeletonListTile(),
+          ),
           error: (_, __) => const FriendlyError(title: "Couldn't load chats"),
           data: (list) {
             if (list.isEmpty) {
               return const EmptyState(
                 icon: Icons.forum_outlined,
                 title: 'No conversations yet',
-                subtitle: 'Tap + to start chatting with a member.',
+                subtitle: 'Tap "New chat" to start chatting with a member.',
               );
             }
             return RefreshIndicator(
               onRefresh: () => ref.read(userDirectoryProvider).refresh(),
               child: ListView.separated(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  AppSpacing.sm,
+                  AppSpacing.md,
+                  100,
+                ),
                 itemCount: list.length,
-                separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.divider),
-                itemBuilder: (_, i) => _ThreadTile(thread: list[i]),
+                separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
+                itemBuilder: (_, i) => _ThreadCard(thread: list[i]),
               ),
             );
           },
@@ -80,51 +94,162 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
   }
 }
 
-class _ThreadTile extends StatelessWidget {
-  const _ThreadTile({required this.thread});
+class _ThreadCard extends StatelessWidget {
+  const _ThreadCard({required this.thread});
   final ChatThread thread;
 
   bool get _isPlaceholder => thread.last.senderId.isEmpty;
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: AppColors.guruPrimary.withValues(alpha: 0.15),
-        child: Text(
-          thread.peerName.characters.first.toUpperCase(),
-          style: const TextStyle(color: AppColors.guruPrimary, fontWeight: FontWeight.w600),
+    final initial = thread.peerName.isNotEmpty
+        ? thread.peerName.characters.first.toUpperCase()
+        : '?';
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(AppRadii.lg),
+      child: InkWell(
+        onTap: () => context.go('/home/chats/${thread.peerId}'),
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(AppRadii.lg),
+            border: Border.all(color: AppColors.divider),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x08101828),
+                blurRadius: 10,
+                offset: Offset(0, 3),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppColors.guruPrimary,
+                      Color(0xFF4F8DEB),
+                    ],
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  initial,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            thread.peerName,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: thread.unread > 0
+                                  ? FontWeight.w700
+                                  : FontWeight.w600,
+                              color: AppColors.ink,
+                              letterSpacing: -0.1,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (!_isPlaceholder)
+                          Text(
+                            TimeFormat.relative(thread.last.createdAt),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: thread.unread > 0
+                                  ? Theme.of(context).colorScheme.primary
+                                  : AppColors.subtle,
+                              fontWeight: thread.unread > 0
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            thread.last.text,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: _isPlaceholder
+                                  ? AppColors.muted
+                                  : thread.unread > 0
+                                      ? AppColors.ink
+                                      : AppColors.subtle,
+                              fontSize: 13,
+                              fontStyle: _isPlaceholder
+                                  ? FontStyle.italic
+                                  : FontStyle.normal,
+                              height: 1.35,
+                            ),
+                          ),
+                        ),
+                        if (thread.unread > 0) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            constraints: const BoxConstraints(minWidth: 22),
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.primary,
+                              borderRadius: BorderRadius.circular(AppRadii.pill),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withValues(alpha: 0.35),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              '${thread.unread}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-      title: Text(thread.peerName, style: const TextStyle(fontWeight: FontWeight.w600)),
-      subtitle: Text(
-        thread.last.text,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(color: AppColors.subtle, fontSize: 13),
-      ),
-      trailing: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          if (!_isPlaceholder)
-            Text(TimeFormat.relative(thread.last.createdAt),
-                style: const TextStyle(fontSize: 11, color: AppColors.subtle)),
-          if (thread.unread > 0) ...[
-            const SizedBox(height: 4),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary,
-                borderRadius: BorderRadius.circular(AppRadii.pill),
-              ),
-              child: Text('${thread.unread}',
-                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700)),
-            ),
-          ],
-        ],
-      ),
-      onTap: () => context.go('/home/chats/${thread.peerId}'),
     );
   }
 }

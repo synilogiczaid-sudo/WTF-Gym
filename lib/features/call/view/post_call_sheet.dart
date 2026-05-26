@@ -40,10 +40,11 @@ class _TrainerPostCallSheetState extends ConsumerState<TrainerPostCallSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
     return Padding(
       padding: EdgeInsets.fromLTRB(
         AppSpacing.lg,
-        AppSpacing.lg,
+        AppSpacing.sm,
         AppSpacing.lg,
         AppSpacing.lg + MediaQuery.viewInsetsOf(context).bottom,
       ),
@@ -51,13 +52,36 @@ class _TrainerPostCallSheetState extends ConsumerState<TrainerPostCallSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Wrap up this session', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: AppSpacing.sm),
-          const Text(
-            'Add a quick note for next time and mark complete when done.',
-            style: TextStyle(fontSize: 13, color: AppColors.subtle),
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppRadii.md),
+                ),
+                child: Icon(Icons.note_alt_rounded, color: primary, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Wrap up this session',
+                        style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 2),
+                    const Text(
+                      'Add a quick note for next time and mark complete when done.',
+                      style: TextStyle(fontSize: 12.5, color: AppColors.subtle, height: 1.4),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.lg),
           TextField(
             controller: _notes,
             maxLines: 4,
@@ -69,9 +93,22 @@ class _TrainerPostCallSheetState extends ConsumerState<TrainerPostCallSheet> {
           const SizedBox(height: AppSpacing.md),
           Row(
             children: [
-              Expanded(child: SecondaryButton(label: 'Save', onPressed: _busy ? null : () => _save(complete: false))),
+              Expanded(
+                child: SecondaryButton(
+                  label: 'Save',
+                  icon: Icons.bookmark_outline_rounded,
+                  onPressed: _busy ? null : () => _save(complete: false),
+                ),
+              ),
               const SizedBox(width: AppSpacing.sm),
-              Expanded(child: PrimaryButton(label: 'Mark complete', loading: _busy, onPressed: () => _save(complete: true))),
+              Expanded(
+                child: PrimaryButton(
+                  label: 'Mark complete',
+                  icon: Icons.check_rounded,
+                  loading: _busy,
+                  onPressed: () => _save(complete: true),
+                ),
+              ),
             ],
           ),
         ],
